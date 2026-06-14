@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
 import { useNavigate, useParams } from "react-router-dom";
 import API from "../api/axios";
+
+const STATUSES = ["todo", "in_progress", "done"];
 
 function Project() {
   const { id } = useParams();
@@ -141,6 +144,16 @@ function Project() {
     }
   };
 
+  const handleDragEnd = ({ active, over }) => {
+    if (!over || !STATUSES.includes(over.id)) return;
+
+    const task = tasks.find((item) => item.id === active.id);
+
+    if (!task || task.status === over.id) return;
+
+    handleStatusChange(task.id, over.id);
+  };
+
   const handleCommentInputChange = (taskId, value) => {
     setCommentInputs((prev) => ({
       ...prev,
@@ -169,70 +182,16 @@ function Project() {
   };
 
   const renderTaskCard = (task) => (
-    <div key={task.id} style={styles.taskCard}>
-      <div style={styles.taskTop}>
-        <h3 style={styles.taskTitle}>{task.title}</h3>
-        <span style={priorityBadge(task.priority)}>{task.priority}</span>
-      </div>
-
-      <p style={styles.taskDescription}>{task.description || "No description"}</p>
-
-      <div style={styles.taskMeta}>
-        <span>Status: {task.status}</span>
-      </div>
-
-      <div style={styles.actions}>
-        <select
-          style={styles.smallInput}
-          value={task.status}
-          disabled={loadingTaskId === task.id}
-          onChange={(e) => handleStatusChange(task.id, e.target.value)}
-        >
-          <option value="todo">todo</option>
-          <option value="in_progress">in_progress</option>
-          <option value="done">done</option>
-        </select>
-
-        <button
-          type="button"
-          style={styles.deleteButton}
-          disabled={loadingTaskId === task.id}
-          onClick={() => handleDeleteTask(task.id)}
-        >
-          {loadingTaskId === task.id ? "Loading..." : "Delete"}
-        </button>
-      </div>
-
-      <div style={styles.commentSection}>
-        <h4 style={styles.commentTitle}>Comments</h4>
-
-        <div style={styles.commentList}>
-          {(commentsByTask[task.id] || []).map((comment) => (
-            <div key={comment.id} style={styles.commentItem}>
-              <strong>{comment.author?.name || "User"}:</strong> {comment.content}
-            </div>
-          ))}
-        </div>
-
-        <div style={styles.commentForm}>
-          <input
-            style={styles.commentInput}
-            type="text"
-            placeholder="Write a comment..."
-            value={commentInputs[task.id] || ""}
-            onChange={(e) => handleCommentInputChange(task.id, e.target.value)}
-          />
-          <button
-            type="button"
-            style={styles.commentButton}
-            disabled={loadingTaskId === task.id}
-            onClick={() => handleAddComment(task.id)}
-          >
-            Add
-          </button>
-        </div>
-      </div>
-    </div>
+    <DraggableTaskCard
+      key={task.id}
+      task={task}
+      comments={commentsByTask[task.id] || []}
+      commentValue={commentInputs[task.id] || ""}
+      loadingTaskId={loadingTaskId}
+      onDelete={handleDeleteTask}
+      onCommentChange={handleCommentInputChange}
+      onAddComment={handleAddComment}
+    />
   );
 
   return (
@@ -301,29 +260,121 @@ function Project() {
 
       {error && <p style={styles.error}>{error}</p>}
 
-      <div style={styles.board}>
-        <div style={styles.column}>
-          <div style={styles.columnHeader}>
-            <h2 style={styles.columnTitle}>TODO</h2>
-            <span style={styles.count}>{groupedTasks.todo.length}</span>
-          </div>
-          <div style={styles.columnBody}>{groupedTasks.todo.map(renderTaskCard)}</div>
+      <DndContext onDragEnd={handleDragEnd}>
+        <div style={styles.board}>
+          <DroppableColumn
+            id="todo"
+            title="TODO"
+            tasks={groupedTasks.todo}
+            renderTaskCard={renderTaskCard}
+          />
+
+          <DroppableColumn
+            id="in_progress"
+            title="IN PROGRESS"
+            tasks={groupedTasks.in_progress}
+            renderTaskCard={renderTaskCard}
+          />
+
+          <DroppableColumn
+            id="done"
+            title="DONE"
+            tasks={groupedTasks.done}
+            renderTaskCard={renderTaskCard}
+          />
+        </div>
+      </DndContext>
+    </div>
+  );
+}
+
+function DroppableColumn({ id, title, tasks, renderTaskCard }) {
+  const { setNodeRef } = useDroppable({ id });
+
+  return (
+    <div ref={setNodeRef} style={styles.column}>
+      <div style={styles.columnHeader}>
+        <h2 style={styles.columnTitle}>{title}</h2>
+        <span style={styles.count}>{tasks.length}</span>
+      </div>
+      <div style={styles.columnBody}>{tasks.map(renderTaskCard)}</div>
+    </div>
+  );
+}
+
+function DraggableTaskCard({
+  task,
+  comments,
+  commentValue,
+  loadingTaskId,
+  onDelete,
+  onCommentChange,
+  onAddComment,
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task.id,
+  });
+  const dragStyle = {
+    ...styles.taskCard,
+    opacity: isDragging ? 0.6 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={dragStyle}>
+      <div style={styles.dragHandle} {...listeners} {...attributes}>
+        ⋮⋮ Drag
+      </div>
+
+      <div style={styles.taskTop}>
+        <h3 style={styles.taskTitle}>{task.title}</h3>
+      </div>
+
+      <p style={styles.taskDescription}>{task.description || "No description"}</p>
+
+      <div style={styles.taskMeta}>
+        <span style={statusBadge(task.status)}>{task.status}</span>
+        <span style={priorityBadge(task.priority)}>{task.priority}</span>
+      </div>
+
+      <div style={styles.actions}>
+        <button
+          type="button"
+          style={styles.deleteButton}
+          disabled={loadingTaskId === task.id}
+          onClick={() => onDelete(task.id)}
+        >
+          {loadingTaskId === task.id ? "Loading..." : "Delete"}
+        </button>
+      </div>
+
+      <div style={styles.commentSection}>
+        <h4 style={styles.commentTitle}>Comments</h4>
+
+        <div style={styles.commentList}>
+          {comments.map((comment) => (
+            <div key={comment.id} style={styles.commentItem}>
+              <strong>{comment.author?.name || "User"}:</strong> {comment.content}
+            </div>
+          ))}
         </div>
 
-        <div style={styles.column}>
-          <div style={styles.columnHeader}>
-            <h2 style={styles.columnTitle}>IN PROGRESS</h2>
-            <span style={styles.count}>{groupedTasks.in_progress.length}</span>
-          </div>
-          <div style={styles.columnBody}>{groupedTasks.in_progress.map(renderTaskCard)}</div>
-        </div>
-
-        <div style={styles.column}>
-          <div style={styles.columnHeader}>
-            <h2 style={styles.columnTitle}>DONE</h2>
-            <span style={styles.count}>{groupedTasks.done.length}</span>
-          </div>
-          <div style={styles.columnBody}>{groupedTasks.done.map(renderTaskCard)}</div>
+        <div style={styles.commentForm}>
+          <input
+            style={styles.commentInput}
+            type="text"
+            placeholder="Write a comment..."
+            value={commentValue}
+            onChange={(e) => onCommentChange(task.id, e.target.value)}
+          />
+          <button
+            type="button"
+            style={styles.commentButton}
+            disabled={loadingTaskId === task.id}
+            onClick={() => onAddComment(task.id)}
+          >
+            Add
+          </button>
         </div>
       </div>
     </div>
@@ -332,7 +383,7 @@ function Project() {
 
 const priorityBadge = (priority) => ({
   display: "inline-block",
-  padding: "4px 10px",
+  padding: "3px 8px",
   borderRadius: "999px",
   fontSize: "12px",
   fontWeight: "600",
@@ -345,12 +396,31 @@ const priorityBadge = (priority) => ({
   color: "#fff",
 });
 
+const statusBadge = (status) => ({
+  display: "inline-block",
+  padding: "3px 8px",
+  borderRadius: "999px",
+  fontSize: "12px",
+  fontWeight: "600",
+  background:
+    status === "done"
+      ? "#166534"
+      : status === "in_progress"
+      ? "#92400e"
+      : "#1e40af",
+  color: "#fff",
+});
+
 const styles = {
   wrapper: {
     minHeight: "100vh",
-    padding: "32px",
+    width: "100%",
+    maxWidth: "1480px",
+    margin: "0 auto",
+    padding: "32px 40px",
     background: "#0f172a",
     color: "#fff",
+    boxSizing: "border-box",
   },
   topBar: {
     marginBottom: "20px",
@@ -420,8 +490,8 @@ const styles = {
   },
   board: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "16px",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "20px",
     alignItems: "start",
   },
   column: {
@@ -449,11 +519,11 @@ const styles = {
   },
   columnBody: {
     display: "grid",
-    gap: "12px",
+    gap: "10px",
   },
   taskCard: {
     background: "#1e293b",
-    padding: "16px",
+    padding: "12px",
     borderRadius: "14px",
     border: "1px solid #334155",
   },
@@ -462,25 +532,37 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: "8px",
-    marginBottom: "10px",
+    marginBottom: "8px",
+  },
+  dragHandle: {
+    display: "inline-flex",
+    alignItems: "center",
+    marginBottom: "8px",
+    color: "#94a3b8",
+    cursor: "grab",
+    fontSize: "12px",
+    fontWeight: "600",
+    lineHeight: 1,
+    touchAction: "none",
   },
   taskTitle: {
     margin: 0,
     fontSize: "16px",
   },
   taskDescription: {
-    margin: "0 0 12px 0",
+    margin: "0 0 8px 0",
     color: "#cbd5e1",
   },
   taskMeta: {
-    fontSize: "13px",
-    color: "#94a3b8",
-    marginBottom: "12px",
+    display: "flex",
+    gap: "6px",
+    flexWrap: "wrap",
+    marginBottom: "10px",
   },
   actions: {
     display: "grid",
-    gap: "10px",
-    marginBottom: "14px",
+    gap: "8px",
+    marginBottom: "10px",
   },
   smallInput: {
     padding: "10px",
@@ -490,7 +572,7 @@ const styles = {
     color: "#fff",
   },
   deleteButton: {
-    padding: "10px",
+    padding: "8px",
     border: "none",
     borderRadius: "10px",
     background: "#dc2626",
@@ -499,20 +581,20 @@ const styles = {
   },
   commentSection: {
     borderTop: "1px solid #334155",
-    paddingTop: "12px",
+    paddingTop: "10px",
   },
   commentTitle: {
-    margin: "0 0 10px 0",
+    margin: "0 0 8px 0",
     fontSize: "14px",
   },
   commentList: {
     display: "grid",
-    gap: "8px",
-    marginBottom: "10px",
+    gap: "6px",
+    marginBottom: "8px",
   },
   commentItem: {
     background: "#0f172a",
-    padding: "8px 10px",
+    padding: "6px 8px",
     borderRadius: "10px",
     fontSize: "13px",
     color: "#cbd5e1",
@@ -523,14 +605,14 @@ const styles = {
     gap: "8px",
   },
   commentInput: {
-    padding: "10px",
+    padding: "8px 10px",
     borderRadius: "10px",
     border: "1px solid #334155",
     background: "#0f172a",
     color: "#fff",
   },
   commentButton: {
-    padding: "10px 14px",
+    padding: "8px 12px",
     border: "none",
     borderRadius: "10px",
     background: "#2563eb",

@@ -5,6 +5,8 @@ const {
   deleteTaskService,
 } = require('../services/taskService');
 
+const VALID_TASK_STATUSES = ['todo', 'in_progress', 'done'];
+
 const createTask = async (req, res) => {
   try {
     const {
@@ -26,6 +28,12 @@ const createTask = async (req, res) => {
     if (!projectId) {
       return res.status(400).json({
         message: 'Project ID is required',
+      });
+    }
+
+    if (status !== undefined && !VALID_TASK_STATUSES.includes(status)) {
+      return res.status(400).json({
+        message: 'Invalid task status',
       });
     }
 
@@ -84,6 +92,15 @@ const getProjectTasks = async (req, res) => {
 
 const updateTask = async (req, res) => {
   try {
+    if (
+      req.body.status !== undefined &&
+      !VALID_TASK_STATUSES.includes(req.body.status)
+    ) {
+      return res.status(400).json({
+        message: 'Invalid task status',
+      });
+    }
+
     const updatedTask = await updateTaskService({
       taskId: req.params.id,
       userId: req.user.id,
