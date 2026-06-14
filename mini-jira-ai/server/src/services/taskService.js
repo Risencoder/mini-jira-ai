@@ -10,6 +10,21 @@ const createTaskService = async ({
   assigneeId,
   createdById,
 }) => {
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      members: {
+        some: {
+          userId: createdById,
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    return null;
+  }
+
   const task = await prisma.task.create({
     data: {
       title,

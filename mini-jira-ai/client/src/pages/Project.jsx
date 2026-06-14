@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import API from "../api/axios";
 
@@ -20,30 +20,16 @@ function Project() {
     status: "todo",
   });
 
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       const { data } = await API.get(`/projects/${id}`);
       setProject(data.project);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load project");
     }
-  };
+  }, [id]);
 
-  const fetchTasks = async () => {
-    try {
-      const { data } = await API.get(`/tasks/project/${id}`);
-      const loadedTasks = data.tasks || [];
-      setTasks(loadedTasks);
-
-      for (const task of loadedTasks) {
-        fetchComments(task.id);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load tasks");
-    }
-  };
-
-  const fetchComments = async (taskId) => {
+  const fetchComments = useCallback(async (taskId) => {
     try {
       const { data } = await API.get(`/tasks/${taskId}/comments`);
       setCommentsByTask((prev) => ({
@@ -56,7 +42,21 @@ function Project() {
         [taskId]: [],
       }));
     }
-  };
+  }, []);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      const { data } = await API.get(`/tasks/project/${id}`);
+      const loadedTasks = data.tasks || [];
+      setTasks(loadedTasks);
+
+      for (const task of loadedTasks) {
+        fetchComments(task.id);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load tasks");
+    }
+  }, [fetchComments, id]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -68,7 +68,7 @@ function Project() {
 
     fetchProject();
     fetchTasks();
-  }, [id, navigate]);
+  }, [fetchProject, fetchTasks, navigate]);
 
   const groupedTasks = useMemo(() => {
     return {

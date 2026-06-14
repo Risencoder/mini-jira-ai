@@ -26,7 +26,13 @@ function Dashboard() {
       return;
     }
 
-    fetchProjects();
+    API.get("/projects")
+      .then(({ data }) => {
+        setProjects(data.projects || []);
+      })
+      .catch(() => {
+        setError("Failed to load projects");
+      });
   }, [navigate]);
 
   const handleCreateProject = async (e) => {

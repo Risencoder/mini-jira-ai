@@ -40,6 +40,12 @@ const createTask = async (req, res) => {
       createdById: req.user.id,
     });
 
+    if (!task) {
+      return res.status(404).json({
+        message: 'Project not found',
+      });
+    }
+
     return res.status(201).json({
       message: 'Task created successfully',
       task,
