@@ -48,6 +48,12 @@ const createTask = async (req, res) => {
       createdById: req.user.id,
     });
 
+    if (task?.error === 'ASSIGNEE_NOT_PROJECT_MEMBER') {
+      return res.status(400).json({
+        message: 'Assignee must be a project member',
+      });
+    }
+
     if (!task) {
       return res.status(404).json({
         message: 'Project not found',
@@ -106,6 +112,12 @@ const updateTask = async (req, res) => {
       userId: req.user.id,
       data: req.body,
     });
+
+    if (updatedTask?.error === 'ASSIGNEE_NOT_PROJECT_MEMBER') {
+      return res.status(400).json({
+        message: 'Assignee must be a project member',
+      });
+    }
 
     if (!updatedTask) {
       return res.status(404).json({

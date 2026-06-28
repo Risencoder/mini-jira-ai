@@ -15,12 +15,28 @@ function Project() {
   const [commentInputs, setCommentInputs] = useState({});
   const [error, setError] = useState("");
   const [loadingTaskId, setLoadingTaskId] = useState(null);
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberMessage, setMemberMessage] = useState("");
+  const [memberError, setMemberError] = useState("");
+  const [memberLoading, setMemberLoading] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    priority: "medium",
+    assigneeId: "",
+    dueDate: "",
+  });
+  const [editError, setEditError] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
 
   const [taskForm, setTaskForm] = useState({
     title: "",
     description: "",
     priority: "medium",
     status: "todo",
+    assigneeId: "",
+    dueDate: "",
   });
 
   const fetchProject = useCallback(async () => {
@@ -103,6 +119,8 @@ function Project() {
         description: "",
         priority: "medium",
         status: "todo",
+        assigneeId: "",
+        dueDate: "",
       });
 
       fetchTasks();
@@ -144,6 +162,61 @@ function Project() {
     }
   };
 
+  const openEditTask = (task) => {
+    setEditingTask(task);
+    setEditError("");
+    setEditForm({
+      title: task.title || "",
+      description: task.description || "",
+      priority: task.priority || "medium",
+      assigneeId: task.assignee?.id || "",
+      dueDate: task.dueDate ? task.dueDate.slice(0, 10) : "",
+    });
+  };
+
+  const closeEditTask = () => {
+    setEditingTask(null);
+    setEditError("");
+  };
+
+  const handleEditChange = (e) => {
+    setEditForm((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleUpdateTask = async (e) => {
+    e.preventDefault();
+
+    if (!editingTask) return;
+
+    if (!editForm.title.trim()) {
+      setEditError("Task title is required");
+      return;
+    }
+
+    setEditError("");
+    setEditLoading(true);
+
+    try {
+      await API.patch(`/tasks/${editingTask.id}`, {
+        title: editForm.title,
+        description: editForm.description,
+        priority: editForm.priority,
+        assigneeId: editForm.assigneeId,
+        dueDate: editForm.dueDate,
+      });
+
+      closeEditTask();
+      fetchTasks();
+    } catch (err) {
+      setEditError(err.response?.data?.message || "Failed to update task");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const handleDragEnd = ({ active, over }) => {
     if (!over || !STATUSES.includes(over.id)) return;
 
@@ -152,6 +225,28 @@ function Project() {
     if (!task || task.status === over.id) return;
 
     handleStatusChange(task.id, over.id);
+  };
+
+  const handleAddMember = async (e) => {
+    e.preventDefault();
+    const email = memberEmail.trim();
+
+    if (!email) return;
+
+    setMemberMessage("");
+    setMemberError("");
+    setMemberLoading(true);
+
+    try {
+      await API.post(`/projects/${id}/members`, { email });
+      setMemberEmail("");
+      setMemberMessage("Member added successfully");
+      fetchProject();
+    } catch (err) {
+      setMemberError(err.response?.data?.message || "Failed to add member");
+    } finally {
+      setMemberLoading(false);
+    }
   };
 
   const handleCommentInputChange = (taskId, value) => {
@@ -188,6 +283,7 @@ function Project() {
       comments={commentsByTask[task.id] || []}
       commentValue={commentInputs[task.id] || ""}
       loadingTaskId={loadingTaskId}
+      onEdit={openEditTask}
       onDelete={handleDeleteTask}
       onCommentChange={handleCommentInputChange}
       onAddComment={handleAddComment}
@@ -207,6 +303,43 @@ function Project() {
           <h1 style={styles.projectTitle}>{project.title}</h1>
           <p style={styles.projectDescription}>{project.description || "No description"}</p>
         </div>
+      )}
+
+      {project && (
+        <section style={styles.membersSection}>
+          <div style={styles.membersHeader}>
+            <h2 style={styles.sectionTitle}>Project Members</h2>
+            <span style={styles.count}>{project.members?.length || 0}</span>
+          </div>
+
+          <div style={styles.membersList}>
+            {(project.members || []).map((member) => (
+              <div key={member.id} style={styles.memberCard}>
+                <div>
+                  <p style={styles.memberName}>{member.user?.name || "Unknown user"}</p>
+                  <p style={styles.memberEmail}>{member.user?.email || "No email"}</p>
+                </div>
+                <span style={styles.memberRole}>{member.role}</span>
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={handleAddMember} style={styles.memberForm}>
+            <input
+              style={styles.input}
+              type="email"
+              placeholder="Invite member by email"
+              value={memberEmail}
+              onChange={(e) => setMemberEmail(e.target.value)}
+            />
+            <button style={styles.button} type="submit" disabled={memberLoading}>
+              {memberLoading ? "Adding..." : "Add Member"}
+            </button>
+          </form>
+
+          {memberMessage && <p style={styles.success}>{memberMessage}</p>}
+          {memberError && <p style={styles.error}>{memberError}</p>}
+        </section>
       )}
 
       <form onSubmit={handleCreateTask} style={styles.form}>
@@ -253,6 +386,30 @@ function Project() {
           </select>
         </div>
 
+        <div style={styles.formRow}>
+          <select
+            style={styles.input}
+            name="assigneeId"
+            value={taskForm.assigneeId}
+            onChange={handleChange}
+          >
+            <option value="">Unassigned</option>
+            {(project?.members || []).map((member) => (
+              <option key={member.userId} value={member.userId}>
+                {member.user?.name || member.user?.email || "Unknown user"}
+              </option>
+            ))}
+          </select>
+
+          <input
+            style={styles.input}
+            type="date"
+            name="dueDate"
+            value={taskForm.dueDate}
+            onChange={handleChange}
+          />
+        </div>
+
         <button style={styles.button} type="submit">
           Create Task
         </button>
@@ -284,6 +441,77 @@ function Project() {
           />
         </div>
       </DndContext>
+
+      {editingTask && (
+        <div style={styles.modalOverlay}>
+          <form onSubmit={handleUpdateTask} style={styles.modal}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.sectionTitle}>Edit Task</h2>
+              <button type="button" style={styles.secondaryButton} onClick={closeEditTask}>
+                Close
+              </button>
+            </div>
+
+            <input
+              style={styles.input}
+              type="text"
+              name="title"
+              placeholder="Task title"
+              value={editForm.title}
+              onChange={handleEditChange}
+            />
+
+            <textarea
+              style={styles.textarea}
+              name="description"
+              placeholder="Task description"
+              value={editForm.description}
+              onChange={handleEditChange}
+            />
+
+            <div style={styles.formRow}>
+              <select
+                style={styles.input}
+                name="priority"
+                value={editForm.priority}
+                onChange={handleEditChange}
+              >
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+              </select>
+
+              <select
+                style={styles.input}
+                name="assigneeId"
+                value={editForm.assigneeId}
+                onChange={handleEditChange}
+              >
+                <option value="">Unassigned</option>
+                {(project?.members || []).map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {member.user?.name || member.user?.email || "Unknown user"}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <input
+              style={styles.input}
+              type="date"
+              name="dueDate"
+              value={editForm.dueDate}
+              onChange={handleEditChange}
+            />
+
+            {editError && <p style={styles.error}>{editError}</p>}
+
+            <button style={styles.button} type="submit" disabled={editLoading}>
+              {editLoading ? "Saving..." : "Save Changes"}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
@@ -307,6 +535,7 @@ function DraggableTaskCard({
   comments,
   commentValue,
   loadingTaskId,
+  onEdit,
   onDelete,
   onCommentChange,
   onAddComment,
@@ -337,7 +566,35 @@ function DraggableTaskCard({
         <span style={priorityBadge(task.priority)}>{task.priority}</span>
       </div>
 
+      {(task.assignee || task.dueDate) && (
+        <div style={styles.taskDetails}>
+          {task.assignee && (
+            <div>
+              <span style={styles.detailLabel}>Assignee</span>
+              <p style={styles.detailText}>
+                {task.assignee.name} ({task.assignee.email})
+              </p>
+            </div>
+          )}
+
+          {task.dueDate && (
+            <div>
+              <span style={styles.detailLabel}>Due date</span>
+              <p style={styles.detailText}>{formatDueDate(task.dueDate)}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={styles.actions}>
+        <button
+          type="button"
+          style={styles.secondaryButton}
+          disabled={loadingTaskId === task.id}
+          onClick={() => onEdit(task)}
+        >
+          Edit
+        </button>
         <button
           type="button"
           style={styles.deleteButton}
@@ -411,6 +668,10 @@ const statusBadge = (status) => ({
   color: "#fff",
 });
 
+const formatDueDate = (dueDate) => {
+  return new Date(dueDate).toLocaleDateString();
+};
+
 const styles = {
   wrapper: {
     minHeight: "100vh",
@@ -446,6 +707,57 @@ const styles = {
   projectDescription: {
     margin: 0,
     color: "#cbd5e1",
+  },
+  membersSection: {
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "16px",
+    marginBottom: "24px",
+    border: "1px solid #334155",
+  },
+  membersHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "14px",
+  },
+  membersList: {
+    display: "grid",
+    gap: "10px",
+    marginBottom: "16px",
+  },
+  memberCard: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    background: "#0f172a",
+    padding: "12px",
+    borderRadius: "10px",
+    border: "1px solid #334155",
+  },
+  memberName: {
+    margin: 0,
+    color: "#fff",
+    fontWeight: "600",
+  },
+  memberEmail: {
+    margin: "4px 0 0 0",
+    color: "#94a3b8",
+    fontSize: "13px",
+  },
+  memberRole: {
+    padding: "4px 10px",
+    borderRadius: "999px",
+    background: "#334155",
+    color: "#cbd5e1",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+  memberForm: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: "12px",
   },
   form: {
     display: "grid",
@@ -485,6 +797,14 @@ const styles = {
     border: "none",
     borderRadius: "10px",
     background: "#2563eb",
+    color: "#fff",
+    cursor: "pointer",
+  },
+  secondaryButton: {
+    padding: "8px",
+    border: "none",
+    borderRadius: "10px",
+    background: "#334155",
     color: "#fff",
     cursor: "pointer",
   },
@@ -559,8 +879,26 @@ const styles = {
     flexWrap: "wrap",
     marginBottom: "10px",
   },
+  taskDetails: {
+    display: "grid",
+    gap: "6px",
+    marginBottom: "10px",
+    color: "#cbd5e1",
+  },
+  detailLabel: {
+    display: "block",
+    marginBottom: "2px",
+    color: "#94a3b8",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+  detailText: {
+    margin: 0,
+    fontSize: "13px",
+  },
   actions: {
     display: "grid",
+    gridTemplateColumns: "1fr 1fr",
     gap: "8px",
     marginBottom: "10px",
   },
@@ -622,6 +960,37 @@ const styles = {
   error: {
     color: "#f87171",
     marginBottom: "16px",
+  },
+  success: {
+    color: "#86efac",
+    marginBottom: "16px",
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "24px",
+    background: "rgba(15, 23, 42, 0.8)",
+    zIndex: 20,
+  },
+  modal: {
+    width: "100%",
+    maxWidth: "560px",
+    display: "grid",
+    gap: "12px",
+    background: "#1e293b",
+    border: "1px solid #334155",
+    borderRadius: "16px",
+    padding: "20px",
+    boxShadow: "0 20px 50px rgba(0,0,0,0.4)",
+  },
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
   },
 };
 

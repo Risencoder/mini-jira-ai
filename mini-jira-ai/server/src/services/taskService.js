@@ -1,5 +1,18 @@
 const prisma = require('../config/prisma');
 
+const isProjectMember = async ({ userId, projectId }) => {
+  const member = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId,
+        projectId,
+      },
+    },
+  });
+
+  return Boolean(member);
+};
+
 const createTaskService = async ({
   title,
   description,
@@ -23,6 +36,17 @@ const createTaskService = async ({
 
   if (!project) {
     return null;
+  }
+
+  if (assigneeId) {
+    const assigneeIsMember = await isProjectMember({
+      userId: assigneeId,
+      projectId,
+    });
+
+    if (!assigneeIsMember) {
+      return { error: 'ASSIGNEE_NOT_PROJECT_MEMBER' };
+    }
   }
 
   const task = await prisma.task.create({
@@ -121,6 +145,17 @@ const updateTaskService = async ({ taskId, userId, data }) => {
 
   if (!existingTask) {
     return null;
+  }
+
+  if (data.assigneeId) {
+    const assigneeIsMember = await isProjectMember({
+      userId: data.assigneeId,
+      projectId: existingTask.projectId,
+    });
+
+    if (!assigneeIsMember) {
+      return { error: 'ASSIGNEE_NOT_PROJECT_MEMBER' };
+    }
   }
 
   const updatedTask = await prisma.task.update({
