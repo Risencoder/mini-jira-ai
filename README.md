@@ -1,8 +1,14 @@
 # Mini Jira with AI-Assisted Task Breakdown
 
-Mini Jira is a full-stack task management application inspired by Jira. It includes project workspaces, project members, task management, comments, assignees, due dates, and a Kanban board with drag-and-drop status changes.
+Mini Jira is a full-stack task management application inspired by Jira. It supports authentication, project management, members, tasks, comments, assignees, due dates, and a Kanban board with drag-and-drop status updates.
 
-AI-assisted task breakdown is part of the product vision, but it is not implemented in v1.0 yet.
+AI-assisted task breakdown is planned for v2 and is not implemented in v1.0.
+
+## Live Demo
+
+- Live Demo: [https://mini-jira-ai.vercel.app](https://mini-jira-ai.vercel.app/)
+- Repository: [https://github.com/Risencoder/mini-jira-ai](https://github.com/Risencoder/mini-jira-ai)
+- Backend API: [https://mini-jira-ai.onrender.com](https://mini-jira-ai.onrender.com/)
 
 ## Tech Stack
 
@@ -11,30 +17,37 @@ Frontend:
 - Vite
 - React Router
 - Axios
-- @dnd-kit/core
+- DnD Kit
 
 Backend:
 - Node.js
 - Express
 - Prisma
-- PostgreSQL
-- JWT authentication
+- JWT
 - bcrypt
+
+Database:
+- PostgreSQL
+- Supabase
+
+Deployment:
+- Vercel
+- Render
 
 ## Current Features
 
-- User registration and login
-- JWT-protected API routes
-- Project creation, editing, deletion, and dashboard listing
-- Project members list and member invitation by email
-- Task creation, editing, deletion, assignee, due date, priority, and status
-- Kanban board with `todo`, `in_progress`, and `done` columns
-- Drag-and-drop task movement between Kanban columns
-- Task comments
-- Confirmation dialogs before deleting tasks or projects
-- Backend authorization checks for project, task, and comment access
-- Backend validation for task status and assignee project membership
-- Modern dark SaaS-style UI polish
+- Authentication with JWT
+- Project CRUD
+- Project Members
+- Task CRUD
+- Task Comments
+- Assignees
+- Due Dates
+- Kanban Board
+- Drag & Drop
+- Confirmation Modals
+- Dark SaaS-style UI
+- Backend authorization and membership checks
 
 ## Architecture Overview
 
@@ -121,20 +134,15 @@ Do not commit real secrets or production database credentials.
 
 ## Current Status
 
-The project is ready as a v1.0 portfolio MVP. Core full-stack workflows are implemented: authentication, projects, members, tasks, comments, Kanban drag-and-drop, assignee, due date, and project/task management.
+Mini Jira v1.0 is a deployed full-stack portfolio MVP. It supports authentication, project management, task management, project members, comments, assignees, due dates, and Kanban drag-and-drop.
 
-Known limitations:
-- No automated test suite yet
-- No AI-assisted task breakdown yet
-- No task reordering inside a Kanban column
-- No comment editing or deletion
-- Role permissions are still basic
+The AI-assisted task breakdown workflow is intentionally left for v2.
 
 ## Roadmap
 
-- Implement AI-assisted task breakdown for generating task suggestions or subtasks
-- Add automated tests for auth, project access, tasks, comments, and Kanban status changes
-- Add stricter role-based permissions for owners, admins, and members
-- Add comment editing and deletion
-- Add optional task ordering inside Kanban columns
-- Improve mobile Kanban ergonomics
+- AI-assisted task breakdown
+- Role-based permissions
+- Automated tests
+- Comment editing/deletion
+- Kanban task ordering
+- Mobile Kanban polish
