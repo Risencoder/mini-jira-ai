@@ -111,6 +111,92 @@ const getProjectByIdService = async ({ projectId, userId }) => {
   return project;
 };
 
+const updateProjectService = async ({ projectId, userId, title, description }) => {
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      ownerId: userId,
+    },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  const updatedProject = await prisma.project.update({
+    where: {
+      id: projectId,
+    },
+    data: {
+      title,
+      description,
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      members: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      tasks: true,
+    },
+  });
+
+  return updatedProject;
+};
+
+const deleteProjectService = async ({ projectId, userId }) => {
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      ownerId: userId,
+    },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  await prisma.$transaction([
+    prisma.comment.deleteMany({
+      where: {
+        task: {
+          projectId,
+        },
+      },
+    }),
+    prisma.task.deleteMany({
+      where: {
+        projectId,
+      },
+    }),
+    prisma.projectMember.deleteMany({
+      where: {
+        projectId,
+      },
+    }),
+    prisma.project.delete({
+      where: {
+        id: projectId,
+      },
+    }),
+  ]);
+
+  return true;
+};
+
 const addMemberToProjectService = async ({ projectId, currentUserId, email, role }) => {
   const project = await prisma.project.findFirst({
     where: {
@@ -183,5 +269,7 @@ module.exports = {
   createProjectService,
   getUserProjectsService,
   getProjectByIdService,
+  updateProjectService,
+  deleteProjectService,
   addMemberToProjectService,
 };

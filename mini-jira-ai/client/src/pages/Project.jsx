@@ -29,6 +29,15 @@ function Project() {
   });
   const [editError, setEditError] = useState("");
   const [editLoading, setEditLoading] = useState(false);
+  const [editingProject, setEditingProject] = useState(false);
+  const [projectForm, setProjectForm] = useState({
+    title: "",
+    description: "",
+  });
+  const [projectActionError, setProjectActionError] = useState("");
+  const [projectActionLoading, setProjectActionLoading] = useState(false);
+  const [confirmDeleteProject, setConfirmDeleteProject] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
 
   const [taskForm, setTaskForm] = useState({
     title: "",
@@ -162,6 +171,82 @@ function Project() {
     }
   };
 
+  const requestDeleteTask = (task) => {
+    setTaskToDelete(task);
+  };
+
+  const cancelDeleteTask = () => {
+    setTaskToDelete(null);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!taskToDelete) return;
+
+    await handleDeleteTask(taskToDelete.id);
+    setTaskToDelete(null);
+  };
+
+  const openEditProject = () => {
+    if (!project) return;
+
+    setProjectActionError("");
+    setProjectForm({
+      title: project.title || "",
+      description: project.description || "",
+    });
+    setEditingProject(true);
+  };
+
+  const closeEditProject = () => {
+    setEditingProject(false);
+    setProjectActionError("");
+  };
+
+  const handleProjectFormChange = (e) => {
+    setProjectForm((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleUpdateProject = async (e) => {
+    e.preventDefault();
+
+    if (!projectForm.title.trim()) {
+      setProjectActionError("Project title is required");
+      return;
+    }
+
+    setProjectActionError("");
+    setProjectActionLoading(true);
+
+    try {
+      const { data } = await API.patch(`/projects/${id}`, {
+        title: projectForm.title,
+        description: projectForm.description,
+      });
+      setProject(data.project);
+      closeEditProject();
+    } catch (err) {
+      setProjectActionError(err.response?.data?.message || "Failed to update project");
+    } finally {
+      setProjectActionLoading(false);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    setProjectActionError("");
+    setProjectActionLoading(true);
+
+    try {
+      await API.delete(`/projects/${id}`);
+      navigate("/dashboard");
+    } catch (err) {
+      setProjectActionError(err.response?.data?.message || "Failed to delete project");
+      setProjectActionLoading(false);
+    }
+  };
+
   const openEditTask = (task) => {
     setEditingTask(task);
     setEditError("");
@@ -284,7 +369,7 @@ function Project() {
       commentValue={commentInputs[task.id] || ""}
       loadingTaskId={loadingTaskId}
       onEdit={openEditTask}
-      onDelete={handleDeleteTask}
+      onDelete={requestDeleteTask}
       onCommentChange={handleCommentInputChange}
       onAddComment={handleAddComment}
     />
@@ -300,8 +385,25 @@ function Project() {
 
       {project && (
         <div style={styles.projectCard}>
-          <h1 style={styles.projectTitle}>{project.title}</h1>
-          <p style={styles.projectDescription}>{project.description || "No description"}</p>
+          <div style={styles.projectHeader}>
+            <div>
+              <h1 style={styles.projectTitle}>{project.title}</h1>
+              <p style={styles.projectDescription}>{project.description || "No description"}</p>
+            </div>
+
+            <div style={styles.projectActions}>
+              <button type="button" style={styles.secondaryButton} onClick={openEditProject}>
+                Edit Project
+              </button>
+              <button
+                type="button"
+                style={styles.deleteButton}
+                onClick={() => setConfirmDeleteProject(true)}
+              >
+                Delete Project
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -512,6 +614,99 @@ function Project() {
           </form>
         </div>
       )}
+
+      {editingProject && (
+        <div style={styles.modalOverlay}>
+          <form onSubmit={handleUpdateProject} style={styles.modal}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.sectionTitle}>Edit Project</h2>
+              <button type="button" style={styles.secondaryButton} onClick={closeEditProject}>
+                Close
+              </button>
+            </div>
+
+            <input
+              style={styles.input}
+              type="text"
+              name="title"
+              placeholder="Project title"
+              value={projectForm.title}
+              onChange={handleProjectFormChange}
+            />
+
+            <textarea
+              style={styles.textarea}
+              name="description"
+              placeholder="Project description"
+              value={projectForm.description}
+              onChange={handleProjectFormChange}
+            />
+
+            {projectActionError && <p style={styles.error}>{projectActionError}</p>}
+
+            <button style={styles.button} type="submit" disabled={projectActionLoading}>
+              {projectActionLoading ? "Saving..." : "Save Project"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {confirmDeleteProject && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h2 style={styles.sectionTitle}>Delete Project</h2>
+            <p style={styles.modalText}>
+              This will permanently delete the project, its tasks, and comments.
+            </p>
+
+            {projectActionError && <p style={styles.error}>{projectActionError}</p>}
+
+            <div style={styles.modalActions}>
+              <button
+                type="button"
+                style={styles.secondaryButton}
+                disabled={projectActionLoading}
+                onClick={() => setConfirmDeleteProject(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                style={styles.deleteButton}
+                disabled={projectActionLoading}
+                onClick={handleDeleteProject}
+              >
+                {projectActionLoading ? "Deleting..." : "Delete Project"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {taskToDelete && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h2 style={styles.sectionTitle}>Delete Task</h2>
+            <p style={styles.modalText}>
+              Are you sure you want to delete "{taskToDelete.title}"?
+            </p>
+
+            <div style={styles.modalActions}>
+              <button type="button" style={styles.secondaryButton} onClick={cancelDeleteTask}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                style={styles.deleteButton}
+                disabled={loadingTaskId === taskToDelete.id}
+                onClick={confirmDeleteTask}
+              >
+                {loadingTaskId === taskToDelete.id ? "Deleting..." : "Delete Task"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -599,7 +794,7 @@ function DraggableTaskCard({
           type="button"
           style={styles.deleteButton}
           disabled={loadingTaskId === task.id}
-          onClick={() => onDelete(task.id)}
+          onClick={() => onDelete(task)}
         >
           {loadingTaskId === task.id ? "Loading..." : "Delete"}
         </button>
@@ -700,6 +895,18 @@ const styles = {
     borderRadius: "16px",
     marginBottom: "24px",
     border: "1px solid #334155",
+  },
+  projectHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "16px",
+  },
+  projectActions: {
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
   },
   projectTitle: {
     margin: "0 0 8px 0",
@@ -991,6 +1198,15 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     gap: "12px",
+  },
+  modalText: {
+    margin: 0,
+    color: "#cbd5e1",
+  },
+  modalActions: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "10px",
   },
 };
 
