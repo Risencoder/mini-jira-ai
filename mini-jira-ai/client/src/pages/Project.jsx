@@ -379,7 +379,7 @@ function Project() {
     <div style={styles.wrapper}>
       <div style={styles.topBar}>
         <button style={styles.backButton} onClick={() => navigate("/dashboard")}>
-          ← Back
+          &larr; Back
         </button>
       </div>
 
@@ -721,6 +721,7 @@ function DroppableColumn({ id, title, tasks, renderTaskCard }) {
         <span style={styles.count}>{tasks.length}</span>
       </div>
       <div style={styles.columnBody}>{tasks.map(renderTaskCard)}</div>
+      {tasks.length === 0 && <div style={styles.emptyColumn}>Drop tasks here</div>}
     </div>
   );
 }
@@ -747,7 +748,7 @@ function DraggableTaskCard({
   return (
     <div ref={setNodeRef} style={dragStyle}>
       <div style={styles.dragHandle} {...listeners} {...attributes}>
-        ⋮⋮ Drag
+        &#8942;&#8942; Drag
       </div>
 
       <div style={styles.taskTop}>
@@ -764,19 +765,11 @@ function DraggableTaskCard({
       {(task.assignee || task.dueDate) && (
         <div style={styles.taskDetails}>
           {task.assignee && (
-            <div>
-              <span style={styles.detailLabel}>Assignee</span>
-              <p style={styles.detailText}>
-                {task.assignee.name} ({task.assignee.email})
-              </p>
-            </div>
+            <span style={styles.detailPill}>@ {task.assignee.name || task.assignee.email}</span>
           )}
 
           {task.dueDate && (
-            <div>
-              <span style={styles.detailLabel}>Due date</span>
-              <p style={styles.detailText}>{formatDueDate(task.dueDate)}</p>
-            </div>
+            <span style={styles.detailPill}>Due {formatDueDate(task.dueDate)}</span>
           )}
         </div>
       )}
@@ -839,13 +832,24 @@ const priorityBadge = (priority) => ({
   borderRadius: "999px",
   fontSize: "12px",
   fontWeight: "600",
+  border:
+    priority === "high"
+      ? "1px solid rgba(248, 113, 113, 0.35)"
+      : priority === "medium"
+      ? "1px solid rgba(251, 191, 36, 0.35)"
+      : "1px solid rgba(56, 189, 248, 0.35)",
   background:
     priority === "high"
-      ? "#7f1d1d"
+      ? "rgba(248, 113, 113, 0.12)"
       : priority === "medium"
-      ? "#78350f"
-      : "#1e3a8a",
-  color: "#fff",
+      ? "rgba(251, 191, 36, 0.12)"
+      : "rgba(56, 189, 248, 0.12)",
+  color:
+    priority === "high"
+      ? "#fca5a5"
+      : priority === "medium"
+      ? "#fcd34d"
+      : "#7dd3fc",
 });
 
 const statusBadge = (status) => ({
@@ -854,13 +858,24 @@ const statusBadge = (status) => ({
   borderRadius: "999px",
   fontSize: "12px",
   fontWeight: "600",
+  border:
+    status === "done"
+      ? "1px solid rgba(134, 239, 172, 0.35)"
+      : status === "in_progress"
+      ? "1px solid rgba(251, 191, 36, 0.35)"
+      : "1px solid rgba(56, 189, 248, 0.35)",
   background:
     status === "done"
-      ? "#166534"
+      ? "rgba(34, 197, 94, 0.12)"
       : status === "in_progress"
-      ? "#92400e"
-      : "#1e40af",
-  color: "#fff",
+      ? "rgba(251, 191, 36, 0.12)"
+      : "rgba(56, 189, 248, 0.12)",
+  color:
+    status === "done"
+      ? "#86efac"
+      : status === "in_progress"
+      ? "#fcd34d"
+      : "#7dd3fc",
 });
 
 const formatDueDate = (dueDate) => {
@@ -873,28 +888,29 @@ const styles = {
     width: "100%",
     maxWidth: "1480px",
     margin: "0 auto",
-    padding: "32px 40px",
-    background: "#0f172a",
-    color: "#fff",
+    padding: "28px 40px 40px",
+    background: "transparent",
+    color: "var(--text-h)",
     boxSizing: "border-box",
   },
   topBar: {
-    marginBottom: "20px",
+    marginBottom: "16px",
   },
   backButton: {
-    padding: "10px 16px",
-    border: "none",
-    borderRadius: "10px",
-    background: "#334155",
-    color: "#fff",
+    padding: "9px 14px",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius-sm)",
+    background: "rgba(15, 23, 42, 0.86)",
+    color: "var(--text-h)",
     cursor: "pointer",
   },
   projectCard: {
-    background: "#1e293b",
-    padding: "24px",
-    borderRadius: "16px",
-    marginBottom: "24px",
-    border: "1px solid #334155",
+    background: "linear-gradient(135deg, rgba(16, 24, 39, 0.96), rgba(11, 18, 32, 0.96))",
+    padding: "22px",
+    borderRadius: "var(--radius)",
+    marginBottom: "20px",
+    border: "1px solid var(--border)",
+    boxShadow: "var(--shadow-card)",
   },
   projectHeader: {
     display: "flex",
@@ -910,17 +926,20 @@ const styles = {
   },
   projectTitle: {
     margin: "0 0 8px 0",
+    fontSize: "34px",
+    lineHeight: 1.08,
   },
   projectDescription: {
     margin: 0,
-    color: "#cbd5e1",
+    color: "var(--text)",
   },
   membersSection: {
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "16px",
-    marginBottom: "24px",
-    border: "1px solid #334155",
+    background: "rgba(16, 24, 39, 0.92)",
+    padding: "18px",
+    borderRadius: "var(--radius)",
+    marginBottom: "20px",
+    border: "1px solid var(--border)",
+    boxShadow: "var(--shadow-soft)",
   },
   membersHeader: {
     display: "flex",
@@ -938,14 +957,14 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     gap: "12px",
-    background: "#0f172a",
-    padding: "12px",
-    borderRadius: "10px",
-    border: "1px solid #334155",
+    background: "var(--surface-2)",
+    padding: "10px 12px",
+    borderRadius: "var(--radius-sm)",
+    border: "1px solid var(--border)",
   },
   memberName: {
     margin: 0,
-    color: "#fff",
+    color: "var(--text-h)",
     fontWeight: "600",
   },
   memberEmail: {
@@ -956,8 +975,9 @@ const styles = {
   memberRole: {
     padding: "4px 10px",
     borderRadius: "999px",
-    background: "#334155",
-    color: "#cbd5e1",
+    background: "var(--accent-bg)",
+    border: "1px solid var(--accent-border)",
+    color: "#7dd3fc",
     fontSize: "12px",
     fontWeight: "600",
   },
@@ -969,11 +989,12 @@ const styles = {
   form: {
     display: "grid",
     gap: "12px",
-    marginBottom: "32px",
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "16px",
-    border: "1px solid #334155",
+    marginBottom: "24px",
+    background: "rgba(16, 24, 39, 0.92)",
+    padding: "18px",
+    borderRadius: "var(--radius)",
+    border: "1px solid var(--border)",
+    boxShadow: "var(--shadow-soft)",
   },
   sectionTitle: {
     margin: 0,
@@ -984,36 +1005,38 @@ const styles = {
     gap: "12px",
   },
   input: {
-    padding: "12px",
-    borderRadius: "10px",
-    border: "1px solid #334155",
-    background: "#0f172a",
-    color: "#fff",
+    padding: "11px 12px",
+    borderRadius: "var(--radius-sm)",
+    border: "1px solid var(--border-strong)",
+    background: "var(--surface-2)",
+    color: "var(--text-h)",
   },
   textarea: {
-    padding: "12px",
-    borderRadius: "10px",
-    border: "1px solid #334155",
-    background: "#0f172a",
-    color: "#fff",
-    minHeight: "100px",
+    padding: "11px 12px",
+    borderRadius: "var(--radius-sm)",
+    border: "1px solid var(--border-strong)",
+    background: "var(--surface-2)",
+    color: "var(--text-h)",
+    minHeight: "90px",
     resize: "vertical",
   },
   button: {
-    padding: "12px",
+    padding: "11px 14px",
     border: "none",
-    borderRadius: "10px",
-    background: "#2563eb",
+    borderRadius: "var(--radius-sm)",
+    background: "linear-gradient(135deg, #0284c7, #2563eb)",
     color: "#fff",
     cursor: "pointer",
+    fontWeight: "600",
   },
   secondaryButton: {
-    padding: "8px",
-    border: "none",
-    borderRadius: "10px",
-    background: "#334155",
-    color: "#fff",
+    padding: "7px 10px",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius-sm)",
+    background: "rgba(30, 41, 59, 0.72)",
+    color: "var(--text-h)",
     cursor: "pointer",
+    fontSize: "13px",
   },
   board: {
     display: "grid",
@@ -1022,11 +1045,12 @@ const styles = {
     alignItems: "start",
   },
   column: {
-    background: "#111827",
-    border: "1px solid #334155",
-    borderRadius: "16px",
-    padding: "16px",
-    minHeight: "400px",
+    background: "rgba(11, 18, 32, 0.9)",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius)",
+    padding: "14px",
+    minHeight: "270px",
+    boxShadow: "var(--shadow-soft)",
   },
   columnHeader: {
     display: "flex",
@@ -1039,32 +1063,51 @@ const styles = {
     fontSize: "18px",
   },
   count: {
-    background: "#334155",
+    background: "var(--accent-bg)",
+    border: "1px solid var(--accent-border)",
+    color: "#7dd3fc",
     borderRadius: "999px",
     padding: "4px 10px",
     fontSize: "12px",
+    fontWeight: "700",
   },
   columnBody: {
     display: "grid",
-    gap: "10px",
+    gap: "9px",
+  },
+  emptyColumn: {
+    marginTop: "10px",
+    padding: "18px 10px",
+    border: "1px dashed rgba(148, 163, 184, 0.28)",
+    borderRadius: "var(--radius-sm)",
+    color: "#64748b",
+    fontSize: "13px",
+    textAlign: "center",
+    background: "rgba(15, 23, 42, 0.42)",
   },
   taskCard: {
-    background: "#1e293b",
-    padding: "12px",
-    borderRadius: "14px",
-    border: "1px solid #334155",
+    background: "linear-gradient(180deg, rgba(16, 24, 39, 0.98), rgba(11, 18, 32, 0.98))",
+    padding: "10px",
+    borderRadius: "var(--radius-sm)",
+    border: "1px solid var(--border)",
+    boxShadow: "0 10px 24px rgba(0,0,0,0.16)",
   },
   taskTop: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: "8px",
-    marginBottom: "8px",
+    marginBottom: "6px",
   },
   dragHandle: {
     display: "inline-flex",
     alignItems: "center",
-    marginBottom: "8px",
+    width: "fit-content",
+    marginBottom: "6px",
+    padding: "3px 7px",
+    borderRadius: "999px",
+    background: "rgba(56, 189, 248, 0.08)",
+    border: "1px solid rgba(56, 189, 248, 0.18)",
     color: "#94a3b8",
     cursor: "grab",
     fontSize: "12px",
@@ -1074,23 +1117,27 @@ const styles = {
   },
   taskTitle: {
     margin: 0,
-    fontSize: "16px",
+    fontSize: "15px",
+    lineHeight: 1.25,
   },
   taskDescription: {
-    margin: "0 0 8px 0",
-    color: "#cbd5e1",
+    margin: "0 0 7px 0",
+    color: "var(--text)",
+    fontSize: "13px",
+    lineHeight: 1.35,
   },
   taskMeta: {
     display: "flex",
     gap: "6px",
     flexWrap: "wrap",
-    marginBottom: "10px",
+    marginBottom: "8px",
   },
   taskDetails: {
-    display: "grid",
+    display: "flex",
+    flexWrap: "wrap",
     gap: "6px",
-    marginBottom: "10px",
-    color: "#cbd5e1",
+    marginBottom: "8px",
+    color: "var(--text)",
   },
   detailLabel: {
     display: "block",
@@ -1103,34 +1150,48 @@ const styles = {
     margin: 0,
     fontSize: "13px",
   },
+  detailPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    maxWidth: "100%",
+    padding: "3px 7px",
+    borderRadius: "999px",
+    background: "rgba(15, 23, 42, 0.82)",
+    border: "1px solid rgba(148, 163, 184, 0.18)",
+    color: "#cbd5e1",
+    fontSize: "12px",
+    lineHeight: 1.25,
+  },
   actions: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "8px",
-    marginBottom: "10px",
+    gap: "6px",
+    marginBottom: "8px",
   },
   smallInput: {
     padding: "10px",
-    borderRadius: "10px",
+    borderRadius: "8px",
     border: "1px solid #334155",
-    background: "#0f172a",
+    background: "#0b1220",
     color: "#fff",
   },
   deleteButton: {
-    padding: "8px",
-    border: "none",
-    borderRadius: "10px",
-    background: "#dc2626",
-    color: "#fff",
+    padding: "7px 10px",
+    border: "1px solid var(--danger-border)",
+    borderRadius: "var(--radius-sm)",
+    background: "var(--danger-bg)",
+    color: "#fecaca",
     cursor: "pointer",
+    fontSize: "13px",
   },
   commentSection: {
-    borderTop: "1px solid #334155",
-    paddingTop: "10px",
+    borderTop: "1px solid var(--border-strong)",
+    paddingTop: "8px",
   },
   commentTitle: {
-    margin: "0 0 8px 0",
-    fontSize: "14px",
+    margin: "0 0 6px 0",
+    fontSize: "13px",
+    color: "#94a3b8",
   },
   commentList: {
     display: "grid",
@@ -1138,11 +1199,11 @@ const styles = {
     marginBottom: "8px",
   },
   commentItem: {
-    background: "#0f172a",
+    background: "var(--surface-2)",
     padding: "6px 8px",
-    borderRadius: "10px",
+    borderRadius: "var(--radius-sm)",
     fontSize: "13px",
-    color: "#cbd5e1",
+    color: "var(--text)",
   },
   commentForm: {
     display: "grid",
@@ -1151,25 +1212,26 @@ const styles = {
   },
   commentInput: {
     padding: "8px 10px",
-    borderRadius: "10px",
-    border: "1px solid #334155",
-    background: "#0f172a",
-    color: "#fff",
+    borderRadius: "var(--radius-sm)",
+    border: "1px solid var(--border-strong)",
+    background: "var(--surface-2)",
+    color: "var(--text-h)",
   },
   commentButton: {
     padding: "8px 12px",
     border: "none",
-    borderRadius: "10px",
-    background: "#2563eb",
+    borderRadius: "var(--radius-sm)",
+    background: "var(--accent-strong)",
     color: "#fff",
     cursor: "pointer",
+    fontSize: "13px",
   },
   error: {
-    color: "#f87171",
+    color: "var(--danger)",
     marginBottom: "16px",
   },
   success: {
-    color: "#86efac",
+    color: "var(--success)",
     marginBottom: "16px",
   },
   modalOverlay: {
@@ -1179,19 +1241,20 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     padding: "24px",
-    background: "rgba(15, 23, 42, 0.8)",
+    background: "rgba(2, 6, 23, 0.82)",
+    backdropFilter: "blur(12px)",
     zIndex: 20,
   },
   modal: {
     width: "100%",
-    maxWidth: "560px",
+    maxWidth: "540px",
     display: "grid",
     gap: "12px",
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "16px",
-    padding: "20px",
-    boxShadow: "0 20px 50px rgba(0,0,0,0.4)",
+    background: "linear-gradient(180deg, var(--surface), var(--surface-2))",
+    border: "1px solid var(--border-strong)",
+    borderRadius: "var(--radius)",
+    padding: "18px",
+    boxShadow: "0 24px 70px rgba(0,0,0,0.48)",
   },
   modalHeader: {
     display: "flex",

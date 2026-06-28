@@ -1,8 +1,8 @@
 # Mini Jira with AI-Assisted Task Breakdown
 
-Mini Jira is a full-stack task management app inspired by Jira. It supports projects, members, tasks, comments, and a Kanban board with drag-and-drop status changes.
+Mini Jira is a full-stack task management application inspired by Jira. It includes project workspaces, project members, task management, comments, assignees, due dates, and a Kanban board with drag-and-drop status changes.
 
-The AI-assisted task breakdown feature is part of the project vision and roadmap, but it is not implemented yet.
+AI-assisted task breakdown is part of the product vision, but it is not implemented in v1.0 yet.
 
 ## Tech Stack
 
@@ -25,15 +25,16 @@ Backend:
 
 - User registration and login
 - JWT-protected API routes
-- Project creation and project list
-- Project detail page
-- Project members model and API support
-- Task creation, update, and deletion
-- Comment creation and display
+- Project creation, editing, deletion, and dashboard listing
+- Project members list and member invitation by email
+- Task creation, editing, deletion, assignee, due date, priority, and status
 - Kanban board with `todo`, `in_progress`, and `done` columns
 - Drag-and-drop task movement between Kanban columns
-- Backend authorization checks for project/task access
-- Basic backend validation for task status values
+- Task comments
+- Confirmation dialogs before deleting tasks or projects
+- Backend authorization checks for project, task, and comment access
+- Backend validation for task status and assignee project membership
+- Modern dark SaaS-style UI polish
 
 ## Architecture Overview
 
@@ -56,7 +57,7 @@ mini-jira-ai/
       utils/           Shared backend utilities
 ```
 
-The frontend communicates with the backend through REST endpoints under `/api`. The backend uses Prisma to access PostgreSQL and protects project/task data through JWT authentication plus membership checks.
+The frontend communicates with the backend through REST endpoints under `/api`. The backend uses Prisma for PostgreSQL access and protects project data with JWT authentication plus project membership checks.
 
 ## Running Locally
 
@@ -70,7 +71,12 @@ cd ../server
 npm install
 ```
 
-Set up backend environment variables in `mini-jira-ai/server/.env`.
+Create environment files from the examples:
+
+```bash
+cp mini-jira-ai/client/.env.example mini-jira-ai/client/.env
+cp mini-jira-ai/server/.env.example mini-jira-ai/server/.env
+```
 
 Run the backend:
 
@@ -86,20 +92,28 @@ cd mini-jira-ai/client
 npm run dev
 ```
 
-By default, the frontend expects the API at:
+Default local URLs:
 
 ```text
-http://localhost:5000/api
+Frontend: http://localhost:5173
+Backend:  http://localhost:5000/api
 ```
 
 ## Environment Variables
 
-Create `mini-jira-ai/server/.env` with:
+Frontend (`mini-jira-ai/client/.env`):
+
+```env
+VITE_API_URL="http://localhost:5000/api"
+```
+
+Backend (`mini-jira-ai/server/.env`):
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
 DIRECT_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
 JWT_SECRET="replace-with-a-long-random-secret"
+CLIENT_URL="http://localhost:5173"
 PORT=5000
 ```
 
@@ -107,18 +121,20 @@ Do not commit real secrets or production database credentials.
 
 ## Current Status
 
-This project is an MVP suitable for portfolio demonstration. Core project/task/comment workflows are implemented, and the Kanban board supports drag-and-drop between status columns.
+The project is ready as a v1.0 portfolio MVP. Core full-stack workflows are implemented: authentication, projects, members, tasks, comments, Kanban drag-and-drop, assignee, due date, and project/task management.
 
-The codebase still needs stronger validation, tests, better production configuration, and the planned AI-assisted task breakdown workflow.
+Known limitations:
+- No automated test suite yet
+- No AI-assisted task breakdown yet
+- No task reordering inside a Kanban column
+- No comment editing or deletion
+- Role permissions are still basic
 
 ## Roadmap
 
 - Implement AI-assisted task breakdown for generating task suggestions or subtasks
-- Add task assignees and due date controls to the UI
-- Add project member management UI
-- Add role-based permissions for owners, admins, and members
-- Add task editing UI
+- Add automated tests for auth, project access, tasks, comments, and Kanban status changes
+- Add stricter role-based permissions for owners, admins, and members
 - Add comment editing and deletion
-- Add tests for auth, project access, tasks, comments, and Kanban status changes
-- Add production-ready API configuration and stricter CORS settings
 - Add optional task ordering inside Kanban columns
+- Improve mobile Kanban ergonomics
